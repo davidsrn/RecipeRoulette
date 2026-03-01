@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Cookie, FastAPI, Form, HTTPException, Request
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -227,6 +227,29 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
 
 
 
+
+
+@app.post("/admin/upload-db")
+async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
+    import pathlib, sqlite3
+    if not hmac.compare_digest(secret, APP_PASSWORD):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from models import DB_PATH as db_path_str, _engine
+    db_path = pathlib.Path(db_path_str)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    data = await file.read()
+    tmp = pathlib.Path(str(db_path) + ".upload_tmp")
+    tmp.write_bytes(data)
+    tmp.replace(db_path)
+    for ext in ("-wal", "-shm"):
+        stale = pathlib.Path(str(db_path) + ext)
+        if stale.exists():
+            stale.unlink()
+    _engine.dispose()
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        count = conn.execute("SELECT COUNT(*) FROM recipes WHERE thumbnail_data IS NOT NULL").fetchone()[0]
+    return JSONResponse({"ok": True, "received": len(data), "size": db_path.stat().st_size, "with_thumbnails": count})
 
 
 @app.get("/api/thumbnail/{recipe_id}")
