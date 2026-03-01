@@ -77,9 +77,22 @@
 <div id="reveal-card" class="hidden">
   <div class="bg-white rounded-2xl shadow-lg border border-stone-100 overflow-hidden">
 
+    <!-- Thumbnail: tries the Instagram media endpoint, falls back to gradient placeholder -->
+    <div class="relative">
+      <img id="reveal-thumb"
+        src="" alt="Recipe preview"
+        class="w-full object-cover max-h-56"
+        onerror="this.style.display='none'; document.getElementById('thumb-fallback').style.display='flex';" />
+      <div id="thumb-fallback"
+        class="hidden h-32 bg-gradient-to-br from-warm-100 to-warm-200 items-center justify-center text-5xl">
+        🍽️
+      </div>
+    </div>
+
     <!-- Card header -->
     <div class="bg-gradient-to-r from-primary to-accent px-5 py-4">
       <p class="text-white/80 text-xs font-semibold uppercase tracking-widest mb-1">Today's pick</p>
+      <p id="reveal-title" class="text-white font-bold text-base mb-2 leading-snug"></p>
       <div class="flex gap-2 flex-wrap">
         <span id="reveal-category"
           class="px-3 py-1 rounded-full bg-white/20 text-white text-sm font-semibold backdrop-blur-sm">
@@ -92,8 +105,6 @@
 
     <!-- Card body -->
     <div class="px-5 py-5 flex flex-col gap-3">
-      <p class="text-stone-500 text-sm">Ready to get cooking? Open the recipe on Instagram.</p>
-
       <button
         id="cook-btn"
         onclick="openRecipe()"

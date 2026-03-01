@@ -2,8 +2,9 @@ import os
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, String, DateTime
+from sqlalchemy import create_engine, inspect, String, DateTime, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from typing import Optional
 
 load_dotenv()
 
@@ -50,6 +51,7 @@ class Recipe(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     url: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     shortcode: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
     category: Mapped[str] = mapped_column(String, default="Uncategorized")
     mood: Mapped[str] = mapped_column(String, default="None")
     date_added: Mapped[datetime] = mapped_column(
@@ -61,6 +63,7 @@ class Recipe(Base):
             "id": self.id,
             "url": self.url,
             "shortcode": self.shortcode,
+            "title": self.title,
             "category": self.category,
             "mood": self.mood,
             "date_added": self.date_added.isoformat(),
@@ -91,5 +94,11 @@ def get_session():
 
 
 def init_db():
-    """Create all tables if they don't exist. Safe to call multiple times."""
+    """Create all tables if they don't exist. Migrates existing DBs safely."""
     Base.metadata.create_all(_engine)
+    # Migration: add 'title' column for DBs created before v1.1
+    existing_cols = [c["name"] for c in inspect(_engine).get_columns("recipes")]
+    if "title" not in existing_cols:
+        with _engine.connect() as conn:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN title VARCHAR"))
+            conn.commit()

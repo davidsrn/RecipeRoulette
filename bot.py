@@ -13,6 +13,7 @@ import logging
 import os
 import re
 
+import httpx
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
@@ -63,6 +64,25 @@ def clean_url(url: str) -> str:
     return url.split("?")[0].rstrip("/")
 
 
+async def fetch_og_title(url: str) -> str | None:
+    """Try to fetch the og:title from an Instagram URL. Returns None on failure."""
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=6.0) as client:
+            r = await client.get(url, headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                )
+            })
+        # Try both attribute orderings for the og:title meta tag
+        m = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', r.text)
+        if not m:
+            m = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', r.text)
+        return m.group(1).strip() if m else None
+    except Exception:
+        return None
+
+
 # ── Handler ───────────────────────────────────────────────────────────────────
 
 
@@ -96,8 +116,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         session.add(Recipe(url=url, shortcode=shortcode))
         session.commit()
 
+    # Best-effort title fetch (runs after replying so it doesn't delay the response)
     await update.message.reply_text("Recipe added to the Roulette! \U0001f35d")
     logger.info("Added: %s (shortcode: %s)", url, shortcode)
+
+    title = await fetch_og_title(url)
+    if title:
+        with get_session() as session:
+            recipe = session.query(Recipe).filter_by(url=url).first()
+            if recipe:
+                recipe.title = title
+                session.commit()
+        logger.info("Title fetched: %s", title)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

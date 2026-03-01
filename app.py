@@ -187,6 +187,7 @@ async def update_recipe(
     body = await request.json()
     new_category = body.get("category")
     new_mood = body.get("mood")
+    new_title = body.get("title")  # optional free-text, no allowlist needed
 
     if new_category and new_category not in CATEGORIES:
         raise HTTPException(status_code=422, detail=f"Invalid category: {new_category}")
@@ -202,6 +203,8 @@ async def update_recipe(
             recipe.category = new_category
         if new_mood:
             recipe.mood = new_mood
+        if new_title is not None:
+            recipe.title = new_title.strip() or None  # empty string → null
 
         session.commit()
         return JSONResponse(recipe.to_dict())

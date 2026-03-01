@@ -63,9 +63,23 @@ async function spin() {
 
 function showReveal(recipe) {
   const card = document.getElementById('reveal-card');
+
+  // Title
+  const titleEl = document.getElementById('reveal-title');
+  titleEl.textContent = recipe.title || '';
+  titleEl.style.display = recipe.title ? '' : 'none';
+
+  // Badges
   document.getElementById('reveal-category').textContent = recipe.category;
   document.getElementById('reveal-mood').textContent =
     recipe.mood === 'None' ? 'No mood set' : recipe.mood;
+
+  // Thumbnail — try Instagram media endpoint, onerror in HTML handles fallback
+  const thumb = document.getElementById('reveal-thumb');
+  const fallback = document.getElementById('thumb-fallback');
+  thumb.style.display = '';
+  fallback.style.display = 'none';
+  thumb.src = `https://www.instagram.com/p/${recipe.shortcode}/media/?size=l`;
 
   card.classList.remove('hidden');
   card.classList.add('fade-up');
@@ -100,6 +114,7 @@ function filterList(query) {
   const q = query.toLowerCase();
   document.querySelectorAll('#recipe-list li[id^="row-"]').forEach(row => {
     const text = [
+      row.dataset.title,
       row.dataset.shortcode,
       row.dataset.category,
       row.dataset.mood,
@@ -110,14 +125,15 @@ function filterList(query) {
 
 // ── Manage page: edit modal ───────────────────────────────────────────────────
 
-function openEdit(id, category, mood) {
+function openEdit(id, category, mood, title) {
   editingId = id;
 
   // Find shortcode from the row
   const row = document.getElementById(`row-${id}`);
   document.getElementById('edit-shortcode').textContent = row?.dataset.shortcode ?? '';
 
-  // Pre-select current values
+  // Pre-fill current values
+  document.getElementById('edit-title').value = title || '';
   document.getElementById('edit-category').value = category;
   document.getElementById('edit-mood').value = mood;
 
@@ -132,6 +148,7 @@ function closeEdit() {
 async function saveEdit() {
   if (!editingId) return;
 
+  const title = document.getElementById('edit-title').value.trim();
   const category = document.getElementById('edit-category').value;
   const mood = document.getElementById('edit-mood').value;
 
@@ -139,7 +156,7 @@ async function saveEdit() {
     const res = await fetch(`/api/recipe/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, mood }),
+      body: JSON.stringify({ title, category, mood }),
     });
 
     if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -149,10 +166,18 @@ async function saveEdit() {
     // Update the row in-place without a page reload
     const row = document.getElementById(`row-${editingId}`);
     if (row) {
+      row.dataset.title = updated.title || '';
       row.dataset.category = updated.category;
       row.dataset.mood = updated.mood;
 
-      const badges = row.querySelectorAll('span');
+      // Update title display
+      const titleEl = row.querySelector('[data-role="title"]');
+      if (titleEl) {
+        titleEl.textContent = updated.title || '';
+        titleEl.style.display = updated.title ? '' : 'none';
+      }
+
+      const badges = row.querySelectorAll('span[class*="rounded-full"]');
       if (badges[0]) badges[0].textContent = updated.category;
       if (badges[1]) badges[1].textContent = updated.mood;
     }
