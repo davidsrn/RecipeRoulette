@@ -35,13 +35,17 @@
            flex items-center justify-between gap-3"
   >
     <!-- Thumbnail -->
-    <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-warm-100">
+    <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-warm-100 flex items-center justify-center">
+      {% if r.thumbnail_url %}
       <img
-        src="https://www.instagram.com/p/{{ r.shortcode }}/media/?size=t"
+        src="{{ r.thumbnail_url }}"
         alt=""
         class="w-full h-full object-cover"
-        onerror="this.parentElement.innerHTML='<span class=\'flex items-center justify-center w-full h-full text-xl\'>🍽️</span>'"
+        onerror="this.parentElement.innerHTML='<span class=\'text-xl\'>🍽️</span>'"
       />
+      {% else %}
+      <span class="text-xl">🍽️</span>
+      {% endif %}
     </div>
 
     <!-- Info -->

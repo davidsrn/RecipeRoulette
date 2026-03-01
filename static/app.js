@@ -74,12 +74,17 @@ function showReveal(recipe) {
   document.getElementById('reveal-mood').textContent =
     recipe.mood === 'None' ? 'No mood set' : recipe.mood;
 
-  // Thumbnail — try Instagram media endpoint, onerror in HTML handles fallback
+  // Thumbnail — use stored og:image URL if available, otherwise show fallback
   const thumb = document.getElementById('reveal-thumb');
   const fallback = document.getElementById('thumb-fallback');
-  thumb.style.display = '';
-  fallback.style.display = 'none';
-  thumb.src = `https://www.instagram.com/p/${recipe.shortcode}/media/?size=l`;
+  if (recipe.thumbnail_url) {
+    thumb.style.display = '';
+    fallback.style.display = 'none';
+    thumb.src = recipe.thumbnail_url;
+  } else {
+    thumb.style.display = 'none';
+    fallback.style.display = 'flex';
+  }
 
   card.classList.remove('hidden');
   card.classList.add('fade-up');
