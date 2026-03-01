@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Cookie, FastAPI, Form, HTTPException, Request
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -222,6 +222,24 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
     if not rr_session or not verify_session_cookie(rr_session):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return JSONResponse(MOODS)
+
+
+@app.post("/admin/upload-db")
+async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
+    """Temporary endpoint — replace the SQLite DB file. Remove after use."""
+    if not hmac.compare_digest(secret, APP_PASSWORD):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    import shutil, tempfile, pathlib
+    db_path = pathlib.Path(DB_PATH)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = pathlib.Path(str(db_path) + ".upload_tmp")
+    try:
+        with tmp.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+        tmp.replace(db_path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return JSONResponse({"ok": True, "size": db_path.stat().st_size})
 
 
 @app.get("/api/thumbnail/{recipe_id}")
