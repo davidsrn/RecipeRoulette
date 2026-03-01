@@ -6,9 +6,15 @@ echo "DB_PATH: ${DB_PATH:-/data/recipes.db}"
 echo "PORT:    ${PORT:-8000}"
 
 # If the DB doesn't exist yet, initialise it and import the CSV
-if [ ! -f "${DB_PATH:-/data/recipes.db}" ]; then
+DB_FILE="${DB_PATH:-/data/recipes.db}"
+echo "Checking for DB at: $DB_FILE"
+ls -lah "$(dirname $DB_FILE)" 2>/dev/null || echo "(data dir missing)"
+if [ ! -f "$DB_FILE" ]; then
     echo "First run — initialising database and importing CSV..."
     python import_csv.py
+else
+    SIZE=$(stat -c%s "$DB_FILE" 2>/dev/null || stat -f%z "$DB_FILE" 2>/dev/null || echo "unknown")
+    echo "DB exists, size=${SIZE} bytes — skipping import"
 fi
 
 # Start the Telegram bot in the background
