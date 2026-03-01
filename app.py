@@ -6,7 +6,9 @@ Run:
 """
 
 import hmac
+import json
 import os
+import re
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -21,9 +23,12 @@ from sqlalchemy import func
 
 from models import CATEGORIES, MOODS, Recipe, get_session, init_db
 
+import google.generativeai as genai
+
 load_dotenv()
 
 APP_PASSWORD = os.getenv("APP_PASSWORD", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 COOKIE_NAME = "rr_session"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
@@ -228,6 +233,65 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
 
 
 
+
+
+@app.post("/api/recipe/{recipe_id}/analyze")
+async def analyze_recipe(recipe_id: int, rr_session: Optional[str] = Cookie(default=None)):
+    """Use Gemini to parse the stored og:description into ingredients, instructions, and mood."""
+    if not rr_session or not verify_session_cookie(rr_session):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY not configured")
+
+    with get_session() as session:
+        recipe = session.get(Recipe, recipe_id)
+        if not recipe:
+            raise HTTPException(status_code=404, detail="Recipe not found")
+        if not recipe.description:
+            raise HTTPException(status_code=422, detail="No description available to analyze")
+        description = recipe.description
+
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    prompt = f"""Extract recipe information from this Instagram post caption.
+Return ONLY a valid JSON object with exactly these fields:
+- "ingredients": a newline-separated list of ingredients (null if none found)
+- "instructions": numbered steps as a newline-separated string (null if none found)
+- "mood": one of exactly: "None", "Quick", "Date Night", "Healthy", "Comfort Food", "Fancy", "Lazy Day", "Meal Prep"
+
+Caption:
+{description}
+
+Return only the JSON object, no markdown, no extra text."""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        # Strip markdown code fences if the model adds them
+        text = re.sub(r'^```[a-z]*\n?', '', text)
+        text = re.sub(r'\n?```$', '', text).strip()
+        parsed = json.loads(text)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {exc}")
+
+    ingredients = parsed.get("ingredients") or None
+    instructions = parsed.get("instructions") or None
+    mood = parsed.get("mood") or "None"
+    if mood not in MOODS:
+        mood = "None"
+
+    with get_session() as session:
+        recipe = session.get(Recipe, recipe_id)
+        if not recipe:
+            raise HTTPException(status_code=404, detail="Recipe not found")
+        if ingredients:
+            recipe.ingredients = ingredients
+        if instructions:
+            recipe.instructions = instructions
+        recipe.mood = mood
+        session.commit()
+        return JSONResponse(recipe.to_dict())
 
 
 @app.get("/api/thumbnail/{recipe_id}")

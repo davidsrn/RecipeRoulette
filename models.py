@@ -59,6 +59,9 @@ class Recipe(Base):
     date_added: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
+    ingredients: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
+    instructions: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
 
     def to_dict(self) -> dict:
         return {
@@ -70,6 +73,9 @@ class Recipe(Base):
             "category": self.category,
             "mood": self.mood,
             "date_added": self.date_added.isoformat(),
+            "description": self.description,
+            "ingredients": self.ingredients,
+            "instructions": self.instructions,
         }
 
 
@@ -108,4 +114,10 @@ def init_db():
             conn.execute(text("ALTER TABLE recipes ADD COLUMN thumbnail_url VARCHAR"))
         if "thumbnail_data" not in existing_cols:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN thumbnail_data BLOB"))
+        if "description" not in existing_cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN description VARCHAR"))
+        if "ingredients" not in existing_cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN ingredients VARCHAR"))
+        if "instructions" not in existing_cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN instructions VARCHAR"))
         conn.commit()

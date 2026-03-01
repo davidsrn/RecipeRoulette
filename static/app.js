@@ -166,6 +166,19 @@ function showReveal(recipe) {
     fallback.textContent  = '🍽️';
   }
 
+  // Recipe details + analyze button
+  showRecipeDetails(recipe);
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const hasExtracted = recipe.ingredients || recipe.instructions;
+  if (recipe.description && !hasExtracted) {
+    analyzeBtn.classList.remove('hidden');
+    document.getElementById('analyze-icon').textContent = '✨';
+    document.getElementById('analyze-label').textContent = 'Extract recipe';
+    analyzeBtn.disabled = false;
+  } else {
+    analyzeBtn.classList.add('hidden');
+  }
+
   // Spring-pop the card (force reflow to re-trigger animation even if card was visible)
   card.classList.remove('hidden', 'card-pop', 'fade-up');
   void card.offsetWidth;
@@ -183,6 +196,8 @@ function hideReveal() {
   card.classList.add('hidden');
   card.classList.remove('card-pop', 'fade-up');
   currentRecipe = null;
+  document.getElementById('recipe-details').classList.add('hidden');
+  document.getElementById('analyze-btn').classList.add('hidden');
 }
 
 // ── Deep link ─────────────────────────────────────────────────────────────────
@@ -283,6 +298,81 @@ function showToast(message, type = 'success') {
 
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
+}
+
+// ── Recipe details ────────────────────────────────────────────────────────────
+
+function escHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showRecipeDetails(recipe) {
+  const detailsEl    = document.getElementById('recipe-details');
+  const ingrSection  = document.getElementById('ingr-section');
+  const instrSection = document.getElementById('instr-section');
+  const ingrList     = document.getElementById('ingr-list');
+  const instrList    = document.getElementById('instr-list');
+
+  if (recipe.ingredients) {
+    const lines = recipe.ingredients.split('\n').map(l => l.trim()).filter(Boolean);
+    ingrList.innerHTML = lines
+      .map(l => `<li class="flex gap-2 items-start"><span class="text-primary mt-0.5 shrink-0">•</span><span>${escHtml(l)}</span></li>`)
+      .join('');
+    ingrSection.classList.remove('hidden');
+  } else {
+    ingrSection.classList.add('hidden');
+  }
+
+  if (recipe.instructions) {
+    const lines = recipe.instructions.split('\n').map(l => l.trim()).filter(Boolean);
+    instrList.innerHTML = lines
+      .map((l, i) => {
+        const text = l.replace(/^\d+[\.\)]\s*/, '');
+        return `<li class="flex gap-2 items-start"><span class="text-primary font-bold min-w-[1.25rem] shrink-0">${i + 1}.</span><span>${escHtml(text)}</span></li>`;
+      })
+      .join('');
+    instrSection.classList.remove('hidden');
+  } else {
+    instrSection.classList.add('hidden');
+  }
+
+  if (recipe.ingredients || recipe.instructions) {
+    detailsEl.classList.remove('hidden');
+    detailsEl.classList.remove('details-fade');
+    void detailsEl.offsetWidth;
+    detailsEl.classList.add('details-fade');
+  } else {
+    detailsEl.classList.add('hidden');
+  }
+}
+
+async function analyzeRecipe() {
+  if (!currentRecipe) return;
+  const btn   = document.getElementById('analyze-btn');
+  const icon  = document.getElementById('analyze-icon');
+  const label = document.getElementById('analyze-label');
+
+  btn.disabled      = true;
+  icon.textContent  = '⏳';
+  label.textContent = 'Extracting…';
+
+  try {
+    const res = await fetch(`/api/recipe/${currentRecipe.id}/analyze`, { method: 'POST' });
+    if (!res.ok) throw new Error(`${res.status}`);
+    const updated = await res.json();
+    currentRecipe = updated;
+    showRecipeDetails(updated);
+    btn.classList.add('hidden');
+    // Refresh mood badge if it changed
+    const moodEl = document.getElementById('reveal-mood');
+    if (moodEl) moodEl.textContent = updated.mood === 'None' ? 'No mood set' : updated.mood;
+    showToast('Recipe extracted! ✨', 'success');
+  } catch (err) {
+    icon.textContent  = '✨';
+    label.textContent = 'Extract recipe';
+    btn.disabled      = false;
+    showToast('Extraction failed. Try again.', 'error');
+  }
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────

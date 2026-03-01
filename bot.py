@@ -81,48 +81,43 @@ def clean_og_title(raw: str | None) -> str | None:
     return text or None
 
 
-async def fetch_og_metadata(url: str) -> tuple[str | None, bytes | None]:
-    """Fetch a clean title and thumbnail image bytes from an Instagram URL.
+async def fetch_og_metadata(url: str) -> tuple[str | None, bytes | None, str | None]:
+    """Fetch title, thumbnail bytes, and post description from an Instagram URL.
 
-    Both are fetched within the same httpx client so the CDN image URL
-    (which is IP/session-bound) is requested from the same context that
-    received it — avoiding the 403 that occurs when storing and re-fetching
-    later from a different IP.
+    All fetched in one httpx session so the CDN image URL (IP/session-bound)
+    is requested before it expires.
     """
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
             r = await client.get(url, headers={"User-Agent": _UA})
             html_text = r.text
 
-            # og:title
-            m_title = re.search(
-                r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', html_text
-            )
-            if not m_title:
-                m_title = re.search(
-                    r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', html_text
+            def _og(prop: str) -> str | None:
+                m = re.search(
+                    rf'<meta[^>]+property=["\']og:{prop}["\'][^>]+content=["\'](.*?)["\']',
+                    html_text,
                 )
-            title = clean_og_title(m_title.group(1) if m_title else None)
+                if not m:
+                    m = re.search(
+                        rf'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:{prop}["\']',
+                        html_text,
+                    )
+                return _html.unescape(m.group(1)).strip() if m else None
 
-            # og:image → download bytes immediately in the same client session
-            m_img = re.search(
-                r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html_text
-            )
-            if not m_img:
-                m_img = re.search(
-                    r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', html_text
-                )
+            title = clean_og_title(_og("title"))
+            description = _og("description") or None
 
+            # Download thumbnail bytes in the same session (CDN URL is IP-bound)
             image_bytes: bytes | None = None
-            if m_img:
-                img_url = _html.unescape(m_img.group(1).strip())
+            img_url = _og("image")
+            if img_url:
                 img_r = await client.get(img_url, headers={"User-Agent": _UA})
                 if img_r.status_code == 200:
                     image_bytes = img_r.content
 
-        return title, image_bytes
+        return title, image_bytes, description
     except Exception:
-        return None, None
+        return None, None, None
 
 
 # ── Handler ───────────────────────────────────────────────────────────────────
@@ -162,8 +157,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text("Recipe added to the Roulette! \U0001f35d")
     logger.info("Added: %s (shortcode: %s)", url, shortcode)
 
-    title, image_bytes = await fetch_og_metadata(url)
-    if title or image_bytes:
+    title, image_bytes, description = await fetch_og_metadata(url)
+    if title or image_bytes or description:
         with get_session() as session:
             recipe = session.query(Recipe).filter_by(url=url).first()
             if recipe:
@@ -171,11 +166,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     recipe.title = title
                 if image_bytes:
                     recipe.thumbnail_data = image_bytes
+                if description:
+                    recipe.description = description
                 session.commit()
         logger.info(
-            "Metadata saved — title: %s, thumbnail: %s bytes",
+            "Metadata saved — title: %s, thumbnail: %s bytes, description: %s chars",
             title,
             len(image_bytes) if image_bytes else 0,
+            len(description) if description else 0,
         )
 
 

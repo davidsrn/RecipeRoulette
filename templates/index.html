@@ -123,6 +123,30 @@
       >
         Spin again
       </button>
+
+      <!-- Extract recipe button (shown when description exists but not yet analyzed) -->
+      <button
+        id="analyze-btn"
+        onclick="analyzeRecipe()"
+        class="hidden w-full py-3 rounded-xl border-2 border-amber-200 hover:border-amber-400
+               text-amber-600 hover:text-amber-700 font-semibold text-sm transition-all
+               flex items-center justify-center gap-2"
+      >
+        <span id="analyze-icon">✨</span>
+        <span id="analyze-label">Extract recipe</span>
+      </button>
+
+      <!-- Ingredients + Instructions (shown after extraction or if already stored) -->
+      <div id="recipe-details" class="hidden border-t border-stone-100 pt-3 flex flex-col gap-4">
+        <div id="ingr-section" class="hidden">
+          <p class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Ingredients</p>
+          <ul id="ingr-list" class="text-sm text-stone-700 space-y-1 pl-0 list-none"></ul>
+        </div>
+        <div id="instr-section" class="hidden">
+          <p class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Instructions</p>
+          <ol id="instr-list" class="text-sm text-stone-700 space-y-2 pl-0 list-none"></ol>
+        </div>
+      </div>
     </div>
   </div>
 </div>
