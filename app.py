@@ -225,6 +225,27 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
 
 
 
+@app.get("/admin/db-info")
+async def db_info(secret: str):
+    """Temporary diagnostic endpoint."""
+    import pathlib, os
+    if not hmac.compare_digest(secret, APP_PASSWORD):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from models import DB_PATH as db_path_str, Recipe as _R
+    db_path = pathlib.Path(db_path_str)
+    with get_session() as session:
+        total = session.query(_R).count()
+        with_thumb = session.query(_R).filter(_R.thumbnail_data.isnot(None)).count()
+    return JSONResponse({
+        "db_path": str(db_path),
+        "db_path_env": os.getenv("DB_PATH", "(not set — defaults to ./recipes.db)"),
+        "db_exists": db_path.exists(),
+        "db_size": db_path.stat().st_size if db_path.exists() else 0,
+        "total_recipes": total,
+        "with_thumbnails": with_thumb,
+    })
+
+
 @app.get("/api/thumbnail/{recipe_id}")
 async def thumbnail_proxy(recipe_id: int, rr_session: Optional[str] = Cookie(default=None)):
     """Serve stored thumbnail image bytes from DB — no external request."""
