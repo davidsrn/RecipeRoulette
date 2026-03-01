@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, inspect, String, DateTime, text
+from sqlalchemy import create_engine, inspect, LargeBinary, String, DateTime, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from typing import Optional
 
@@ -53,6 +53,7 @@ class Recipe(Base):
     shortcode: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
+    thumbnail_data: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True, default=None)
     category: Mapped[str] = mapped_column(String, default="Uncategorized")
     mood: Mapped[str] = mapped_column(String, default="None")
     date_added: Mapped[datetime] = mapped_column(
@@ -65,7 +66,7 @@ class Recipe(Base):
             "url": self.url,
             "shortcode": self.shortcode,
             "title": self.title,
-            "thumbnail_url": self.thumbnail_url,
+            "has_thumbnail": self.thumbnail_data is not None,
             "category": self.category,
             "mood": self.mood,
             "date_added": self.date_added.isoformat(),
@@ -105,4 +106,6 @@ def init_db():
             conn.execute(text("ALTER TABLE recipes ADD COLUMN title VARCHAR"))
         if "thumbnail_url" not in existing_cols:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN thumbnail_url VARCHAR"))
+        if "thumbnail_data" not in existing_cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN thumbnail_data BLOB"))
         conn.commit()

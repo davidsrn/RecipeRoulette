@@ -74,10 +74,10 @@ function showReveal(recipe) {
   document.getElementById('reveal-mood').textContent =
     recipe.mood === 'None' ? 'No mood set' : recipe.mood;
 
-  // Thumbnail — proxy through our server to bypass Instagram CDN hotlink protection
+  // Thumbnail — served from DB via proxy (no expiring CDN URLs)
   const thumb = document.getElementById('reveal-thumb');
   const fallback = document.getElementById('thumb-fallback');
-  if (recipe.thumbnail_url) {
+  if (recipe.has_thumbnail) {
     thumb.style.display = '';
     fallback.style.display = 'none';
     thumb.src = `/api/thumbnail/${recipe.id}`;

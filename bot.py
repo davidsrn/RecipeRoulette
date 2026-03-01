@@ -9,6 +9,7 @@ Requires in .env:
     AUTHORIZED_USER_ID  — Your numeric Telegram user ID (from @userinfobot)
 """
 
+import html as _html
 import logging
 import os
 import re
@@ -35,6 +36,11 @@ INSTA_URL_RE = re.compile(
 # Extracts the shortcode from an Instagram URL
 SHORTCODE_RE = re.compile(
     r"instagram\.com/(?:p|reels?)/([A-Za-z0-9_-]+)"
+)
+
+_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 )
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -64,30 +70,57 @@ def clean_url(url: str) -> str:
     return url.split("?")[0].rstrip("/")
 
 
-async def fetch_og_metadata(url: str) -> tuple[str | None, str | None]:
-    """Fetch og:title and og:image from an Instagram URL. Returns (title, thumbnail_url)."""
+def clean_og_title(raw: str | None) -> str | None:
+    """Decode HTML entities and strip the 'Author on Instagram:' prefix."""
+    if not raw:
+        return None
+    text = _html.unescape(raw)
+    if " on Instagram: " in text:
+        text = text.split(" on Instagram: ", 1)[1]
+    text = text.strip('"').strip("'").strip()
+    return text or None
+
+
+async def fetch_og_metadata(url: str) -> tuple[str | None, bytes | None]:
+    """Fetch a clean title and thumbnail image bytes from an Instagram URL.
+
+    Both are fetched within the same httpx client so the CDN image URL
+    (which is IP/session-bound) is requested from the same context that
+    received it — avoiding the 403 that occurs when storing and re-fetching
+    later from a different IP.
+    """
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=6.0) as client:
-            r = await client.get(url, headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            r = await client.get(url, headers={"User-Agent": _UA})
+            html_text = r.text
+
+            # og:title
+            m_title = re.search(
+                r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', html_text
+            )
+            if not m_title:
+                m_title = re.search(
+                    r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', html_text
                 )
-            })
+            title = clean_og_title(m_title.group(1) if m_title else None)
 
-        # og:title (try both attribute orderings)
-        m_title = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', r.text)
-        if not m_title:
-            m_title = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', r.text)
-        title = m_title.group(1).strip() if m_title else None
+            # og:image → download bytes immediately in the same client session
+            m_img = re.search(
+                r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html_text
+            )
+            if not m_img:
+                m_img = re.search(
+                    r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', html_text
+                )
 
-        # og:image (try both attribute orderings)
-        m_img = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', r.text)
-        if not m_img:
-            m_img = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', r.text)
-        thumbnail_url = m_img.group(1).strip() if m_img else None
+            image_bytes: bytes | None = None
+            if m_img:
+                img_url = _html.unescape(m_img.group(1).strip())
+                img_r = await client.get(img_url, headers={"User-Agent": _UA})
+                if img_r.status_code == 200:
+                    image_bytes = img_r.content
 
-        return title, thumbnail_url
+        return title, image_bytes
     except Exception:
         return None, None
 
@@ -129,17 +162,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text("Recipe added to the Roulette! \U0001f35d")
     logger.info("Added: %s (shortcode: %s)", url, shortcode)
 
-    title, thumbnail_url = await fetch_og_metadata(url)
-    if title or thumbnail_url:
+    title, image_bytes = await fetch_og_metadata(url)
+    if title or image_bytes:
         with get_session() as session:
             recipe = session.query(Recipe).filter_by(url=url).first()
             if recipe:
                 if title:
                     recipe.title = title
-                if thumbnail_url:
-                    recipe.thumbnail_url = thumbnail_url
+                if image_bytes:
+                    recipe.thumbnail_data = image_bytes
                 session.commit()
-        logger.info("Metadata fetched — title: %s, thumbnail: %s", title, thumbnail_url)
+        logger.info(
+            "Metadata saved — title: %s, thumbnail: %s bytes",
+            title,
+            len(image_bytes) if image_bytes else 0,
+        )
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

@@ -36,7 +36,7 @@
   >
     <!-- Thumbnail -->
     <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-warm-100 flex items-center justify-center">
-      {% if r.thumbnail_url %}
+      {% if r.has_thumbnail %}
       <img
         src="/api/thumbnail/{{ r.id }}"
         alt=""

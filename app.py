@@ -11,7 +11,6 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import httpx
 from dotenv import load_dotenv
 from fastapi import Cookie, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -225,34 +224,19 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
     return JSONResponse(MOODS)
 
 
-_PROXY_UA = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-)
-
-
 @app.get("/api/thumbnail/{recipe_id}")
 async def thumbnail_proxy(recipe_id: int, rr_session: Optional[str] = Cookie(default=None)):
-    """Proxy Instagram CDN images to bypass hotlink protection (403 on direct browser load)."""
+    """Serve stored thumbnail image bytes from DB — no external request."""
     if not rr_session or not verify_session_cookie(rr_session):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     with get_session() as session:
         recipe = session.get(Recipe, recipe_id)
-        if not recipe or not recipe.thumbnail_url:
+        if not recipe or not recipe.thumbnail_data:
             raise HTTPException(status_code=404, detail="No thumbnail")
-
-    try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=8.0) as client:
-            r = await client.get(recipe.thumbnail_url, headers={"User-Agent": _PROXY_UA})
-        if r.status_code != 200:
-            raise HTTPException(status_code=502, detail="Upstream error")
-        content_type = r.headers.get("content-type", "image/jpeg")
         return Response(
-            content=r.content,
-            media_type=content_type,
-            headers={"Cache-Control": "public, max-age=86400"},
+            content=recipe.thumbnail_data,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=604800"},  # 7 days
         )
-    except httpx.RequestError:
-        raise HTTPException(status_code=502, detail="Could not fetch thumbnail")
 
