@@ -229,16 +229,18 @@ async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
     """Temporary endpoint — replace the SQLite DB file. Remove after use."""
     if not hmac.compare_digest(secret, APP_PASSWORD):
         raise HTTPException(status_code=403, detail="Forbidden")
-    import shutil, tempfile, pathlib
+    import pathlib
     db_path = pathlib.Path(DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    data = await file.read()
     tmp = pathlib.Path(str(db_path) + ".upload_tmp")
-    try:
-        with tmp.open("wb") as f:
-            shutil.copyfileobj(file.file, f)
-        tmp.replace(db_path)
-    finally:
-        tmp.unlink(missing_ok=True)
+    tmp.write_bytes(data)
+    tmp.replace(db_path)
+    # Remove WAL/SHM files so SQLAlchemy picks up the new DB cleanly
+    for ext in ("-wal", "-shm"):
+        stale = pathlib.Path(str(db_path) + ext)
+        if stale.exists():
+            stale.unlink()
     return JSONResponse({"ok": True, "size": db_path.stat().st_size})
 
 
