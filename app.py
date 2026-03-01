@@ -7,12 +7,10 @@ Run:
 
 import hmac
 import os
-import re
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import httpx
 from dotenv import load_dotenv
 from fastapi import Cookie, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -225,55 +223,3 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return JSONResponse(MOODS)
 
-
-# ── One-time backfill endpoint (remove after running) ─────────────────────────
-
-_UA = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-)
-
-
-async def _fetch_og(client: httpx.AsyncClient, url: str) -> tuple[str | None, str | None]:
-    try:
-        r = await client.get(url, headers={"User-Agent": _UA})
-        html = r.text
-        m_t = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', html)
-        if not m_t:
-            m_t = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', html)
-        m_i = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html)
-        if not m_i:
-            m_i = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', html)
-        return (m_t.group(1).strip() if m_t else None, m_i.group(1).strip() if m_i else None)
-    except Exception:
-        return None, None
-
-
-@app.post("/admin/backfill-thumbnails")
-async def backfill_thumbnails(rr_session: Optional[str] = Cookie(default=None)):
-    if not rr_session or not verify_session_cookie(rr_session):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    with get_session() as session:
-        recipes = session.query(Recipe).filter(Recipe.thumbnail_url.is_(None)).all()
-
-    if not recipes:
-        return JSONResponse({"message": "Nothing to do — all recipes already have thumbnails."})
-
-    fetched = failed = 0
-    async with httpx.AsyncClient(follow_redirects=True, timeout=8.0) as client:
-        for recipe in recipes:
-            title, thumb = await _fetch_og(client, recipe.url)
-            if thumb:
-                with get_session() as session:
-                    r = session.get(Recipe, recipe.id)
-                    if r:
-                        r.thumbnail_url = thumb
-                        if title and not r.title:
-                            r.title = title
-                        session.commit()
-                fetched += 1
-            else:
-                failed += 1
-
-    return JSONResponse({"fetched": fetched, "failed": failed, "total": len(recipes)})
