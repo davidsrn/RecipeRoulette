@@ -19,7 +19,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import func
 
-from models import CATEGORIES, MOODS, Recipe, get_session, init_db
+from models import CATEGORIES, DB_PATH, MOODS, Recipe, get_session, init_db
 
 load_dotenv()
 
