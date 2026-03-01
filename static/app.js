@@ -152,11 +152,12 @@ function showReveal(recipe) {
 
   // Thumbnail
   if (recipe.has_thumbnail) {
-    thumb.style.display   = '';
     fallback.style.display = 'none';
-    thumb.src = '';
     thumb.classList.remove('thumb-reveal');
+    // Set src in rAF to re-trigger blur-reveal animation.
+    // Do NOT blank thumb.src first — setting src='' fires onerror which hides the element.
     requestAnimationFrame(() => {
+      thumb.style.display = '';
       thumb.src = `/api/thumbnail/${recipe.id}`;
       thumb.classList.add('thumb-reveal');
     });
