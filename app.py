@@ -5,11 +5,16 @@ Run:
     uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import asyncio
 import hmac
+import html as _html
 import os
+import re
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
+
+import httpx
 
 from dotenv import load_dotenv
 from fastapi import Cookie, FastAPI, Form, HTTPException, Request
@@ -239,4 +244,79 @@ async def thumbnail_proxy(recipe_id: int, rr_session: Optional[str] = Cookie(def
             media_type="image/jpeg",
             headers={"Cache-Control": "public, max-age=604800"},  # 7 days
         )
+
+
+# ── One-time backfill endpoint (remove after running on Railway) ──────────────
+
+_BF_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+)
+_BF_SEM = asyncio.Semaphore(4)  # max 4 concurrent fetches
+
+
+def _clean_title(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    text = _html.unescape(raw)
+    if " on Instagram: " in text:
+        text = text.split(" on Instagram: ", 1)[1]
+    text = text.strip('"').strip("'").strip()
+    return text or None
+
+
+async def _fetch_one(client: httpx.AsyncClient, recipe_id: int, url: str):
+    async with _BF_SEM:
+        try:
+            r = await client.get(url, headers={"User-Agent": _BF_UA})
+            html_text = r.text
+            m_t = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']', html_text)
+            if not m_t:
+                m_t = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:title["\']', html_text)
+            m_i = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'](.*?)["\']', html_text)
+            if not m_i:
+                m_i = re.search(r'<meta[^>]+content=["\'](.*?)["\'][^>]+property=["\']og:image["\']', html_text)
+            title = _clean_title(m_t.group(1) if m_t else None)
+            image_bytes = None
+            if m_i:
+                img_url = _html.unescape(m_i.group(1).strip())
+                img_r = await client.get(img_url, headers={"User-Agent": _BF_UA})
+                if img_r.status_code == 200:
+                    image_bytes = img_r.content
+            return recipe_id, title, image_bytes
+        except Exception:
+            return recipe_id, None, None
+
+
+@app.post("/admin/backfill-v2")
+async def backfill_v2(rr_session: Optional[str] = Cookie(default=None)):
+    if not rr_session or not verify_session_cookie(rr_session):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    with get_session() as session:
+        recipes = session.query(Recipe).filter(Recipe.thumbnail_data.is_(None)).all()
+        todo = [(r.id, r.url) for r in recipes]
+
+    if not todo:
+        return JSONResponse({"message": "Nothing to do."})
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=12.0) as client:
+        results = await asyncio.gather(*[_fetch_one(client, rid, url) for rid, url in todo])
+
+    ok = failed = 0
+    for recipe_id, title, image_bytes in results:
+        if image_bytes or title:
+            with get_session() as session:
+                r = session.get(Recipe, recipe_id)
+                if r:
+                    if image_bytes:
+                        r.thumbnail_data = image_bytes
+                    if title and not r.title:
+                        r.title = title
+                    session.commit()
+            ok += 1
+        else:
+            failed += 1
+
+    return JSONResponse({"ok": ok, "failed": failed, "total": len(todo)})
 
