@@ -233,16 +233,19 @@ async def db_info(secret: str):
         raise HTTPException(status_code=403, detail="Forbidden")
     from models import DB_PATH as db_path_str, Recipe as _R
     db_path = pathlib.Path(db_path_str)
+    data_dir = pathlib.Path("/data")
     with get_session() as session:
         total = session.query(_R).count()
         with_thumb = session.query(_R).filter(_R.thumbnail_data.isnot(None)).count()
     return JSONResponse({
         "db_path": str(db_path),
-        "db_path_env": os.getenv("DB_PATH", "(not set — defaults to ./recipes.db)"),
+        "db_path_env": os.getenv("DB_PATH", "(not set)"),
         "db_exists": db_path.exists(),
         "db_size": db_path.stat().st_size if db_path.exists() else 0,
         "total_recipes": total,
         "with_thumbnails": with_thumb,
+        "data_dir_exists": data_dir.exists(),
+        "data_dir_contents": os.listdir(data_dir) if data_dir.exists() else [],
     })
 
 
