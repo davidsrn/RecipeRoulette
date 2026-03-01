@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Cookie, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -224,49 +224,6 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
     return JSONResponse(MOODS)
 
 
-
-@app.post("/admin/upload-db")
-async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
-    """Temporary endpoint — atomically replace the SQLite DB file."""
-    import pathlib
-    if not hmac.compare_digest(secret, APP_PASSWORD):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from models import DB_PATH as db_path_str
-    db_path = pathlib.Path(db_path_str)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    data = await file.read()
-    tmp = pathlib.Path(str(db_path) + ".upload_tmp")
-    tmp.write_bytes(data)
-    tmp.replace(db_path)
-    for ext in ("-wal", "-shm"):
-        stale = pathlib.Path(str(db_path) + ext)
-        if stale.exists():
-            stale.unlink()
-    return JSONResponse({"ok": True, "received": len(data), "size": db_path.stat().st_size, "path": str(db_path)})
-
-
-@app.get("/admin/db-info")
-async def db_info(secret: str):
-    """Temporary diagnostic endpoint."""
-    import pathlib, os
-    if not hmac.compare_digest(secret, APP_PASSWORD):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from models import DB_PATH as db_path_str, Recipe as _R
-    db_path = pathlib.Path(db_path_str)
-    data_dir = pathlib.Path("/data")
-    with get_session() as session:
-        total = session.query(_R).count()
-        with_thumb = session.query(_R).filter(_R.thumbnail_data.isnot(None)).count()
-    return JSONResponse({
-        "db_path": str(db_path),
-        "db_path_env": os.getenv("DB_PATH", "(not set)"),
-        "db_exists": db_path.exists(),
-        "db_size": db_path.stat().st_size if db_path.exists() else 0,
-        "total_recipes": total,
-        "with_thumbnails": with_thumb,
-        "data_dir_exists": data_dir.exists(),
-        "data_dir_contents": os.listdir(data_dir) if data_dir.exists() else [],
-    })
 
 
 @app.get("/api/thumbnail/{recipe_id}")
