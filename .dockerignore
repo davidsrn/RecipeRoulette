@@ -1,0 +1,24 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Secrets — NEVER bake into the image
+.env
+
+# Database — lives on the Railway volume, not in the image
+recipes.db
+
+# Docs / dev files
+PLAN.md
+ARCHITECTURE.md
+DEVELOPMENT.md
+README.md
+*.md
+
+# Misc
+.git/
+.gitignore

@@ -1,0 +1,62 @@
+/* RecipeRoulette — custom overrides (Tailwind handles the rest) */
+
+/* Hide scrollbar on chip rows but keep scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide:webkit-scrollbar {
+  display: none;
+}
+
+/* Filter chips */
+.chip {
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  border: 2px solid #E7E5E4;
+  background: #fff;
+  color: #78716C;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+.chip:hover {
+  border-color: #F97316;
+  color: #F97316;
+}
+.chip-active {
+  background: #F97316;
+  border-color: #F97316;
+  color: #fff;
+}
+.chip-active:hover {
+  background: #EA580C;
+  border-color: #EA580C;
+  color: #fff;
+}
+
+/* Spin button pulse animation */
+@keyframes spin-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
+  70%  { box-shadow: 0 0 0 20px rgba(249,115,22,0); }
+  100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+}
+.spinning {
+  animation: spin-pulse 0.6s ease-out;
+}
+
+/* Reveal card fade-in */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fade-up 0.35s ease-out forwards;
+}
+
+/* Toast variants */
+.toast-success { background: #16a34a; }
+.toast-error   { background: #dc2626; }

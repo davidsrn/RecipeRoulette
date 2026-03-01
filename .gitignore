@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Database
+recipes.db
+recipes.db-shm
+recipes.db-wal
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

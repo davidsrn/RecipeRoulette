@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}RecipeRoulette — Spin{% endblock %}
+
+{% block content %}
+
+<!-- Filter section -->
+<section class="mb-6">
+  <h2 class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Category</h2>
+  <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" id="category-chips">
+    <button
+      class="chip chip-active flex-shrink-0"
+      data-type="category" data-value="All"
+      onclick="toggleFilter('category','All',this)"
+    >All</button>
+    {% for cat in categories %}
+    {% if cat != "Uncategorized" %}
+    <button
+      class="chip flex-shrink-0"
+      data-type="category" data-value="{{ cat }}"
+      onclick="toggleFilter('category','{{ cat }}',this)"
+    >{{ cat }}</button>
+    {% endif %}
+    {% endfor %}
+    <button
+      class="chip flex-shrink-0"
+      data-type="category" data-value="Uncategorized"
+      onclick="toggleFilter('category','Uncategorized',this)"
+    >Uncategorized</button>
+  </div>
+
+  <h2 class="text-xs font-semibold uppercase tracking-widest text-stone-400 mt-4 mb-2">Mood</h2>
+  <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" id="mood-chips">
+    <button
+      class="chip chip-active flex-shrink-0"
+      data-type="mood" data-value="All"
+      onclick="toggleFilter('mood','All',this)"
+    >All</button>
+    {% for mood in moods %}
+    {% if mood != "None" %}
+    <button
+      class="chip flex-shrink-0"
+      data-type="mood" data-value="{{ mood }}"
+      onclick="toggleFilter('mood','{{ mood }}',this)"
+    >{{ mood }}</button>
+    {% endif %}
+    {% endfor %}
+    <button
+      class="chip flex-shrink-0"
+      data-type="mood" data-value="None"
+      onclick="toggleFilter('mood','None',this)"
+    >No mood</button>
+  </div>
+</section>
+
+<!-- Spin button -->
+<div class="flex justify-center my-8">
+  <button
+    id="spin-btn"
+    onclick="spin()"
+    class="relative w-44 h-44 rounded-full bg-primary hover:bg-primary-dark text-white
+           font-extrabold text-xl shadow-xl transition-all active:scale-95
+           flex flex-col items-center justify-center gap-1 select-none
+           ring-8 ring-primary/20 hover:ring-primary/40"
+  >
+    <span class="text-4xl" id="spin-icon">🎲</span>
+    <span>Spin!</span>
+  </button>
+</div>
+
+<!-- No results message (hidden by default) -->
+<div id="no-results" class="hidden text-center text-stone-400 text-sm py-4">
+  No recipes match those filters. Try a different combo!
+</div>
+
+<!-- Recipe reveal card (hidden until spin) -->
+<div id="reveal-card" class="hidden">
+  <div class="bg-white rounded-2xl shadow-lg border border-stone-100 overflow-hidden">
+
+    <!-- Card header -->
+    <div class="bg-gradient-to-r from-primary to-accent px-5 py-4">
+      <p class="text-white/80 text-xs font-semibold uppercase tracking-widest mb-1">Today's pick</p>
+      <div class="flex gap-2 flex-wrap">
+        <span id="reveal-category"
+          class="px-3 py-1 rounded-full bg-white/20 text-white text-sm font-semibold backdrop-blur-sm">
+        </span>
+        <span id="reveal-mood"
+          class="px-3 py-1 rounded-full bg-white/20 text-white text-sm font-semibold backdrop-blur-sm">
+        </span>
+      </div>
+    </div>
+
+    <!-- Card body -->
+    <div class="px-5 py-5 flex flex-col gap-3">
+      <p class="text-stone-500 text-sm">Ready to get cooking? Open the recipe on Instagram.</p>
+
+      <button
+        id="cook-btn"
+        onclick="openRecipe()"
+        class="w-full py-4 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold
+               text-lg transition-colors shadow-md active:scale-95 flex items-center justify-center gap-2"
+      >
+        <span>Let's Cook!</span>
+        <span>👨‍🍳</span>
+      </button>
+
+      <button
+        onclick="spin()"
+        class="w-full py-3 rounded-xl border-2 border-stone-200 hover:border-primary
+               text-stone-600 hover:text-primary font-semibold text-sm transition-colors"
+      >
+        Spin again
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/app.js"></script>
+{% endblock %}

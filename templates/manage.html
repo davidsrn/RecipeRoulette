@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}RecipeRoulette — Manage{% endblock %}
+
+{% block content %}
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-xl font-bold text-stone-800">All Recipes
+    <span class="ml-2 text-sm font-normal text-stone-400">({{ recipes|length }})</span>
+  </h1>
+</div>
+
+<!-- Search bar -->
+<div class="mb-4">
+  <input
+    id="search-input"
+    type="search"
+    placeholder="Filter by shortcode, category or mood..."
+    oninput="filterList(this.value)"
+    class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900
+           text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+  />
+</div>
+
+<!-- Recipe list -->
+<ul id="recipe-list" class="space-y-2">
+  {% for r in recipes %}
+  <li
+    id="row-{{ r.id }}"
+    data-shortcode="{{ r.shortcode }}"
+    data-category="{{ r.category }}"
+    data-mood="{{ r.mood }}"
+    class="bg-white rounded-xl border border-stone-100 shadow-sm px-4 py-3
+           flex items-center justify-between gap-3"
+  >
+    <!-- Info -->
+    <div class="min-w-0">
+      <p class="font-mono text-xs text-stone-400 truncate mb-1">{{ r.shortcode }}</p>
+      <div class="flex gap-1.5 flex-wrap">
+        <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+          {{ r.category }}
+        </span>
+        <span class="px-2 py-0.5 rounded-full bg-accent/20 text-amber-700 text-xs font-semibold">
+          {{ r.mood }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex-shrink-0 flex items-center gap-2">
+      <a href="{{ r.url }}" target="_blank" rel="noopener"
+         class="p-2 rounded-lg text-stone-400 hover:text-primary hover:bg-primary/10 transition"
+         title="Open on Instagram">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round"
+             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
+      <button
+        onclick="openEdit({{ r.id }}, '{{ r.category }}', '{{ r.mood }}')"
+        class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-primary hover:text-white
+               text-stone-600 text-xs font-semibold transition"
+      >Edit</button>
+    </div>
+  </li>
+  {% else %}
+  <li class="text-center text-stone-400 py-12">No recipes yet. Send an Instagram link to the bot!</li>
+  {% endfor %}
+</ul>
+
+<!-- Edit Modal (hidden by default) -->
+<div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeEdit()"></div>
+
+  <!-- Modal card -->
+  <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 z-10">
+    <h2 class="text-lg font-bold text-stone-800 mb-1">Edit Recipe</h2>
+    <p id="edit-shortcode" class="font-mono text-xs text-stone-400 mb-5"></p>
+
+    <!-- Category select -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-stone-600 mb-1">Category</label>
+      <select id="edit-category"
+        class="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-warm text-stone-900
+               text-sm focus:outline-none focus:ring-2 focus:ring-primary transition">
+        {% for cat in categories %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Mood select -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium text-stone-600 mb-1">Mood</label>
+      <select id="edit-mood"
+        class="w-full px-3 py-2.5 rounded-xl border border-stone-200 bg-warm text-stone-900
+               text-sm focus:outline-none focus:ring-2 focus:ring-primary transition">
+        {% for mood in moods %}
+        <option value="{{ mood }}">{{ mood }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="flex gap-3">
+      <button onclick="closeEdit()"
+        class="flex-1 py-3 rounded-xl border-2 border-stone-200 text-stone-600
+               font-semibold text-sm hover:border-stone-300 transition">
+        Cancel
+      </button>
+      <button onclick="saveEdit()"
+        class="flex-1 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white
+               font-semibold text-sm transition shadow-md active:scale-95">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"
+  class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl
+         shadow-xl text-white text-sm font-semibold transition-all">
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/app.js"></script>
+{% endblock %}
