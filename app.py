@@ -227,21 +227,25 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
 @app.post("/admin/upload-db")
 async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
     """Temporary endpoint — replace the SQLite DB file. Remove after use."""
+    import traceback, pathlib
     if not hmac.compare_digest(secret, APP_PASSWORD):
         raise HTTPException(status_code=403, detail="Forbidden")
-    import pathlib
-    db_path = pathlib.Path(DB_PATH)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    data = await file.read()
-    tmp = pathlib.Path(str(db_path) + ".upload_tmp")
-    tmp.write_bytes(data)
-    tmp.replace(db_path)
-    # Remove WAL/SHM files so SQLAlchemy picks up the new DB cleanly
-    for ext in ("-wal", "-shm"):
-        stale = pathlib.Path(str(db_path) + ext)
-        if stale.exists():
-            stale.unlink()
-    return JSONResponse({"ok": True, "size": db_path.stat().st_size})
+    try:
+        db_path = pathlib.Path(DB_PATH)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        data = await file.read()
+        received = len(data)
+        tmp = pathlib.Path(str(db_path) + ".upload_tmp")
+        tmp.write_bytes(data)
+        tmp.replace(db_path)
+        for ext in ("-wal", "-shm"):
+            stale = pathlib.Path(str(db_path) + ext)
+            if stale.exists():
+                stale.unlink()
+        return JSONResponse({"ok": True, "received": received, "size": db_path.stat().st_size})
+    except Exception:
+        tb = traceback.format_exc()
+        return JSONResponse({"ok": False, "error": tb}, status_code=500)
 
 
 @app.get("/api/thumbnail/{recipe_id}")
