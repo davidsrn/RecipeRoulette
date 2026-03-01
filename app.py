@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Cookie, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -227,60 +227,6 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
 
 
 
-@app.post("/admin/upload-db")
-async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
-    """Temporary — replace DB, checkpoint WAL, and hot-reload engine."""
-    import pathlib, sqlite3
-    if not hmac.compare_digest(secret, APP_PASSWORD):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from models import DB_PATH as db_path_str, _engine
-    db_path = pathlib.Path(db_path_str)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    # Write new DB to disk
-    data = await file.read()
-    tmp = pathlib.Path(str(db_path) + ".upload_tmp")
-    tmp.write_bytes(data)
-    tmp.replace(db_path)
-    # Delete stale WAL/SHM so next open reads main file only
-    for ext in ("-wal", "-shm"):
-        stale = pathlib.Path(str(db_path) + ext)
-        if stale.exists():
-            stale.unlink()
-    # Dispose SQLAlchemy pool so fresh connections open the new file
-    _engine.dispose()
-    # Force a full WAL checkpoint so ALL data lands in the main DB file
-    with sqlite3.connect(str(db_path)) as conn:
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    return JSONResponse({
-        "ok": True,
-        "received": len(data),
-        "size": db_path.stat().st_size,
-        "path": str(db_path),
-    })
-
-
-@app.get("/admin/db-info")
-async def db_info(secret: str):
-    """Temporary diagnostic."""
-    import pathlib, os, sqlite3
-    if not hmac.compare_digest(secret, APP_PASSWORD):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    from models import DB_PATH as db_path_str, Recipe as _R
-    db_path = pathlib.Path(db_path_str)
-    with get_session() as session:
-        total = session.query(_R).count()
-        with_thumb = session.query(_R).filter(_R.thumbnail_data.isnot(None)).count()
-    # Raw SQLite check independent of SQLAlchemy pool
-    with sqlite3.connect(str(db_path)) as conn:
-        raw_count = conn.execute("SELECT COUNT(*) FROM recipes WHERE thumbnail_data IS NOT NULL").fetchone()[0]
-    return JSONResponse({
-        "db_path": str(db_path),
-        "db_size": db_path.stat().st_size if db_path.exists() else 0,
-        "total_recipes": total,
-        "with_thumbnails_sqlalchemy": with_thumb,
-        "with_thumbnails_raw": raw_count,
-        "data_dir_contents": os.listdir("/data") if pathlib.Path("/data").exists() else [],
-    })
 
 
 @app.get("/api/thumbnail/{recipe_id}")
