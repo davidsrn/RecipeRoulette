@@ -6,97 +6,182 @@ const filters = { category: 'All', mood: 'All' };
 let currentRecipe = null;
 let editingId = null;
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 // ── Filter chips ──────────────────────────────────────────────────────────────
 
 function toggleFilter(type, value, el) {
   filters[type] = value;
-
-  // Update active chip styling within the same group
   const group = document.getElementById(type === 'category' ? 'category-chips' : 'mood-chips');
   group.querySelectorAll('.chip').forEach(c => c.classList.remove('chip-active'));
   el.classList.add('chip-active');
-
-  // Hide the reveal card when filters change
   hideReveal();
+}
+
+// ── Slot machine ──────────────────────────────────────────────────────────────
+
+const FOOD_EMOJIS = ['🍕','🍜','🥗','🌮','🍣','🥩','🍝','🫕','🥘','🍛','🍱','🥟','🧆','🥙','🍲','🫔'];
+
+function showSlotMachine() {
+  const card     = document.getElementById('reveal-card');
+  const thumb    = document.getElementById('reveal-thumb');
+  const fallback = document.getElementById('thumb-fallback');
+  const titleEl  = document.getElementById('reveal-title');
+  const catEl    = document.getElementById('reveal-category');
+  const moodEl   = document.getElementById('reveal-mood');
+
+  // Reveal card in "loading" state
+  card.classList.remove('hidden', 'card-pop', 'fade-up');
+  thumb.style.display = 'none';
+  fallback.style.display = 'flex';
+  titleEl.style.display = 'none';
+  catEl.textContent  = '· · ·';
+  moodEl.textContent = '· · ·';
+
+  // Cycle emojis
+  let idx = Math.floor(Math.random() * FOOD_EMOJIS.length);
+  let alive = true;
+
+  (function cycle() {
+    if (!alive) return;
+    fallback.textContent = FOOD_EMOJIS[idx++ % FOOD_EMOJIS.length];
+    setTimeout(cycle, 105);
+  })();
+
+  return function stop() { alive = false; };
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+
+function spawnConfetti(anchor) {
+  const rect   = anchor.getBoundingClientRect();
+  const cx     = rect.left + rect.width  / 2;
+  const cy     = rect.top  + rect.height * 0.3;
+  const colors = ['#F97316','#FBBF24','#FB923C','#FCD34D','#FDE68A','#EC4899','#34D399','#60A5FA'];
+
+  for (let i = 0; i < 18; i++) {
+    const dot   = document.createElement('div');
+    dot.className = 'confetti-dot';
+    const angle = (i / 18) * 360 + (Math.random() * 20 - 10);
+    const dist  = 50 + Math.random() * 100;
+    const tx    = (Math.cos(angle * Math.PI / 180) * dist).toFixed(1) + 'px';
+    const ty    = (Math.sin(angle * Math.PI / 180) * dist - 50).toFixed(1) + 'px';
+    const rot   = (Math.random() * 720 - 360).toFixed(0) + 'deg';
+    // Alternate between circles and squares
+    const radius = i % 3 === 0 ? '2px' : '50%';
+
+    dot.style.cssText = [
+      `left:${(cx - 4.5).toFixed(0)}px`,
+      `top:${(cy - 4.5).toFixed(0)}px`,
+      `background:${colors[i % colors.length]}`,
+      `border-radius:${radius}`,
+      `--tx:${tx}`,
+      `--ty:${ty}`,
+      `--rot:${rot}`,
+      `animation-delay:${(Math.random() * 80).toFixed(0)}ms`,
+    ].join(';');
+
+    document.body.appendChild(dot);
+    setTimeout(() => dot.remove(), 1000);
+  }
 }
 
 // ── Spin ──────────────────────────────────────────────────────────────────────
 
 async function spin() {
-  const btn = document.getElementById('spin-btn');
-  const icon = document.getElementById('spin-icon');
+  const btn       = document.getElementById('spin-btn');
   const noResults = document.getElementById('no-results');
 
-  // Animate
-  btn.classList.add('spinning');
-  icon.textContent = '⏳';
+  btn.classList.add('is-spinning');
   btn.disabled = true;
-  hideReveal();
   noResults.classList.add('hidden');
 
-  // Build query
+  const stopSlot   = showSlotMachine();
+  const minWait    = sleep(900); // always spin at least 900 ms for drama
+
   const params = new URLSearchParams();
-  if (filters.category && filters.category !== 'All') params.set('category', filters.category);
-  if (filters.mood && filters.mood !== 'All') params.set('mood', filters.mood);
+  if (filters.category !== 'All') params.set('category', filters.category);
+  if (filters.mood     !== 'All') params.set('mood',     filters.mood);
 
   try {
-    const res = await fetch(`/api/spin?${params.toString()}`);
+    const [res] = await Promise.all([
+      fetch(`/api/spin?${params.toString()}`),
+      minWait,
+    ]);
+
+    stopSlot();
 
     if (res.status === 404) {
+      hideReveal();
       noResults.classList.remove('hidden');
       return;
     }
     if (!res.ok) throw new Error(`Server error ${res.status}`);
 
     currentRecipe = await res.json();
+    await sleep(60); // tiny beat so the slot machine has a moment to stop
     showReveal(currentRecipe);
+
   } catch (err) {
+    stopSlot();
+    hideReveal();
     showToast('Something went wrong. Try again.', 'error');
   } finally {
-    setTimeout(() => {
-      btn.classList.remove('spinning');
-      icon.textContent = '🎲';
-      btn.disabled = false;
-    }, 600);
+    btn.classList.remove('is-spinning');
+    btn.disabled = false;
   }
 }
 
 function showReveal(recipe) {
-  const card = document.getElementById('reveal-card');
+  const card     = document.getElementById('reveal-card');
+  const titleEl  = document.getElementById('reveal-title');
+  const catEl    = document.getElementById('reveal-category');
+  const moodEl   = document.getElementById('reveal-mood');
+  const thumb    = document.getElementById('reveal-thumb');
+  const fallback = document.getElementById('thumb-fallback');
 
   // Title
-  const titleEl = document.getElementById('reveal-title');
-  titleEl.textContent = recipe.title || '';
+  titleEl.textContent   = recipe.title || '';
   titleEl.style.display = recipe.title ? '' : 'none';
 
   // Badges
-  document.getElementById('reveal-category').textContent = recipe.category;
-  document.getElementById('reveal-mood').textContent =
-    recipe.mood === 'None' ? 'No mood set' : recipe.mood;
+  catEl.textContent  = recipe.category;
+  moodEl.textContent = recipe.mood === 'None' ? 'No mood set' : recipe.mood;
 
-  // Thumbnail — served from DB via proxy (no expiring CDN URLs)
-  const thumb = document.getElementById('reveal-thumb');
-  const fallback = document.getElementById('thumb-fallback');
+  // Thumbnail
   if (recipe.has_thumbnail) {
-    thumb.style.display = '';
+    thumb.style.display   = '';
     fallback.style.display = 'none';
-    thumb.src = `/api/thumbnail/${recipe.id}`;
+    thumb.src = '';
+    thumb.classList.remove('thumb-reveal');
+    requestAnimationFrame(() => {
+      thumb.src = `/api/thumbnail/${recipe.id}`;
+      thumb.classList.add('thumb-reveal');
+    });
   } else {
-    thumb.style.display = 'none';
+    thumb.style.display   = 'none';
     fallback.style.display = 'flex';
+    fallback.textContent  = '🍽️';
   }
 
-  card.classList.remove('hidden');
-  card.classList.add('fade-up');
+  // Spring-pop the card (force reflow to re-trigger animation even if card was visible)
+  card.classList.remove('hidden', 'card-pop', 'fade-up');
+  void card.offsetWidth;
+  card.classList.add('card-pop');
 
-  // Scroll card into view smoothly
-  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  // Confetti burst
+  requestAnimationFrame(() => spawnConfetti(card));
+
+  // Scroll into view
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
 function hideReveal() {
   const card = document.getElementById('reveal-card');
   card.classList.add('hidden');
-  card.classList.remove('fade-up');
+  card.classList.remove('card-pop', 'fade-up');
   currentRecipe = null;
 }
 
@@ -104,10 +189,7 @@ function hideReveal() {
 
 function openRecipe() {
   if (!currentRecipe) return;
-
   const { url, shortcode } = currentRecipe;
-
-  // Try Instagram app deep link first; fall back to HTTPS after 500ms
   const deepLink = `instagram://media?id=${shortcode}`;
   window.location.href = deepLink;
   setTimeout(() => { window.open(url, '_blank', 'noopener'); }, 500);
@@ -132,16 +214,11 @@ function filterList(query) {
 
 function openEdit(id, category, mood, title) {
   editingId = id;
-
-  // Find shortcode from the row
   const row = document.getElementById(`row-${id}`);
   document.getElementById('edit-shortcode').textContent = row?.dataset.shortcode ?? '';
-
-  // Pre-fill current values
-  document.getElementById('edit-title').value = title || '';
-  document.getElementById('edit-category').value = category;
-  document.getElementById('edit-mood').value = mood;
-
+  document.getElementById('edit-title').value           = title || '';
+  document.getElementById('edit-category').value        = category;
+  document.getElementById('edit-mood').value            = mood;
   document.getElementById('edit-modal').classList.remove('hidden');
 }
 
@@ -153,9 +230,9 @@ function closeEdit() {
 async function saveEdit() {
   if (!editingId) return;
 
-  const title = document.getElementById('edit-title').value.trim();
+  const title    = document.getElementById('edit-title').value.trim();
   const category = document.getElementById('edit-category').value;
-  const mood = document.getElementById('edit-mood').value;
+  const mood     = document.getElementById('edit-mood').value;
 
   try {
     const res = await fetch(`/api/recipe/${editingId}`, {
@@ -168,17 +245,15 @@ async function saveEdit() {
 
     const updated = await res.json();
 
-    // Update the row in-place without a page reload
     const row = document.getElementById(`row-${editingId}`);
     if (row) {
-      row.dataset.title = updated.title || '';
+      row.dataset.title    = updated.title || '';
       row.dataset.category = updated.category;
-      row.dataset.mood = updated.mood;
+      row.dataset.mood     = updated.mood;
 
-      // Update title display
       const titleEl = row.querySelector('[data-role="title"]');
       if (titleEl) {
-        titleEl.textContent = updated.title || '';
+        titleEl.textContent   = updated.title || '';
         titleEl.style.display = updated.title ? '' : 'none';
       }
 
@@ -213,13 +288,11 @@ function showToast(message, type = 'success') {
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
-  // Space / Enter → spin (on roulette page)
   if ((e.code === 'Space' || e.code === 'Enter') && document.getElementById('spin-btn')) {
     if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
       e.preventDefault();
       spin();
     }
   }
-  // Escape → close edit modal
   if (e.code === 'Escape') closeEdit();
 });
