@@ -5,7 +5,9 @@ Run:
     uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import hmac
 import os
+import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -25,6 +27,22 @@ APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 COOKIE_NAME = "rr_session"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
+# True when running behind Railway's HTTPS termination (or any production env)
+SECURE_COOKIES = os.getenv("RAILWAY_ENVIRONMENT") is not None
+
+# ── Startup validation ────────────────────────────────────────────────────────
+
+_missing = [
+    name for name, val in [
+        ("APP_PASSWORD", APP_PASSWORD),
+        ("SECRET_KEY", SECRET_KEY),
+    ]
+    if not val or val == "change-me"
+]
+if _missing:
+    print(f"ERROR: Required env vars not set or left at defaults: {', '.join(_missing)}")
+    print("Set them in your .env file (local) or Railway Variables (production).")
+    sys.exit(1)
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
@@ -37,7 +55,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -73,7 +91,7 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def login(request: Request, password: str = Form(...)):
-    if password == APP_PASSWORD:
+    if hmac.compare_digest(password, APP_PASSWORD):
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key=COOKIE_NAME,
@@ -81,6 +99,7 @@ async def login(request: Request, password: str = Form(...)):
             max_age=COOKIE_MAX_AGE,
             httponly=True,
             samesite="lax",
+            secure=SECURE_COOKIES,
         )
         return response
     return templates.TemplateResponse(
