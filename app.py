@@ -12,14 +12,14 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Cookie, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import func
 
-from models import CATEGORIES, DB_PATH, MOODS, Recipe, get_session, init_db
+from models import CATEGORIES, MOODS, Recipe, get_session, init_db
 
 load_dotenv()
 
@@ -223,29 +223,6 @@ async def get_moods(rr_session: Optional[str] = Cookie(default=None)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return JSONResponse(MOODS)
 
-
-@app.post("/admin/upload-db")
-async def upload_db(file: UploadFile = File(...), secret: str = Form(...)):
-    """Temporary endpoint — replace the SQLite DB file. Remove after use."""
-    import traceback, pathlib
-    if not hmac.compare_digest(secret, APP_PASSWORD):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    try:
-        db_path = pathlib.Path(DB_PATH)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        data = await file.read()
-        received = len(data)
-        tmp = pathlib.Path(str(db_path) + ".upload_tmp")
-        tmp.write_bytes(data)
-        tmp.replace(db_path)
-        for ext in ("-wal", "-shm"):
-            stale = pathlib.Path(str(db_path) + ext)
-            if stale.exists():
-                stale.unlink()
-        return JSONResponse({"ok": True, "received": received, "size": db_path.stat().st_size})
-    except Exception:
-        tb = traceback.format_exc()
-        return JSONResponse({"ok": False, "error": tb}, status_code=500)
 
 
 @app.get("/api/thumbnail/{recipe_id}")
