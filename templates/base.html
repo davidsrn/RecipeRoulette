@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#F97316" />
+  <meta name="theme-color" content="#8B2635" />
   <title>{% block title %}RecipeRoulette{% endblock %}</title>
 
   <!-- Tailwind CSS -->
@@ -13,15 +13,19 @@
       theme: {
         extend: {
           colors: {
-            primary:   '#F97316',
-            'primary-dark': '#EA580C',
-            accent:    '#FBBF24',
-            warm:      '#FFFBF5',
-            'warm-100':'#FEF3E2',
-            'warm-200':'#FDE8C8',
+            primary:        '#8B2635',
+            'primary-dark': '#6E1D29',
+            accent:         '#C9963E',
+            warm:           '#F5EFE6',
+            'warm-100':     '#EDE0D0',
+            'warm-200':     '#E5D9CC',
+            surface:        '#FFFDF9',
+            espresso:       '#1C1209',
+            'text-muted':   '#7C6B5A',
           },
           fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            sans:  ['Inter', 'system-ui', 'sans-serif'],
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
           },
         }
       }
@@ -31,9 +35,9 @@
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=2" />
 </head>
 
 <body class="bg-warm min-h-screen font-sans text-stone-900 antialiased">
