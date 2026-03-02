@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, inspect, LargeBinary, String, DateTime, text
+from sqlalchemy import create_engine, inspect, LargeBinary, String, DateTime, Boolean, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from typing import Optional
 
@@ -62,6 +62,7 @@ class Recipe(Base):
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
     ingredients: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
     instructions: Mapped[Optional[str]] = mapped_column(String, nullable=True, default=None)
+    done: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     def to_dict(self) -> dict:
         return {
@@ -76,6 +77,7 @@ class Recipe(Base):
             "description": self.description,
             "ingredients": self.ingredients,
             "instructions": self.instructions,
+            "done": self.done,
         }
 
 
@@ -120,4 +122,6 @@ def init_db():
             conn.execute(text("ALTER TABLE recipes ADD COLUMN ingredients VARCHAR"))
         if "instructions" not in existing_cols:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN instructions VARCHAR"))
+        if "done" not in existing_cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN done BOOLEAN DEFAULT 0"))
         conn.commit()
