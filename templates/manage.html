@@ -91,7 +91,7 @@
              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
       </a>
       <button
-        onclick="openEdit({{ r.id }}, '{{ r.category }}', '{{ r.mood }}', {{ r.title | tojson }})"
+        onclick="openEdit({{ r.id }}, '{{ r.category }}', '{{ r.mood }}', {{ r.title | tojson }}, {{ 'true' if r.done else 'false' }})"
         class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-primary hover:text-white
                text-stone-600 text-xs font-semibold transition"
       >Edit</button>
@@ -142,6 +142,15 @@
         <option value="{{ mood }}">{{ mood }}</option>
         {% endfor %}
       </select>
+    </div>
+
+    <!-- Done checkbox -->
+    <div class="mb-6 flex items-center gap-3">
+      <input id="edit-done" type="checkbox"
+        class="w-4 h-4 rounded accent-primary cursor-pointer" />
+      <label for="edit-done" class="text-sm font-medium text-stone-600 cursor-pointer select-none">
+        Mark as done <span class="text-stone-400 font-normal">(exclude from roulette)</span>
+      </label>
     </div>
 
     <div class="flex gap-3">
