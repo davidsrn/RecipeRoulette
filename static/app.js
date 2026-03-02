@@ -343,6 +343,23 @@ async function saveEdit() {
 
       row.dataset.done = updated.done ? 'true' : 'false';
       row.classList.toggle('opacity-50', updated.done);
+
+      const doneBtn = row.querySelector(`button[onclick="toggleDone(${editingId})"]`);
+      if (doneBtn) {
+        if (updated.done) {
+          doneBtn.title = 'Mark as not done';
+          doneBtn.className = 'p-2 rounded-lg transition text-green-600 bg-green-50 hover:bg-green-100';
+          doneBtn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" d="M2.25 12a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
+          </svg>`;
+        } else {
+          doneBtn.title = 'Mark as done';
+          doneBtn.className = 'p-2 rounded-lg transition text-stone-400 hover:text-green-600 hover:bg-green-50';
+          doneBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>`;
+        }
+      }
     }
 
     closeEdit();
