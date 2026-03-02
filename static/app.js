@@ -150,21 +150,21 @@ async function spin() {
 }
 
 function showReveal(recipe) {
-  const card = document.getElementById('reveal-card');
-  const titleEl = document.getElementById('reveal-title');
-  const catEl = document.getElementById('reveal-category');
-  const moodEl = document.getElementById('reveal-mood');
-  const thumb = document.getElementById('reveal-thumb');
+  const card     = document.getElementById('reveal-card');
+  const titleEl  = document.getElementById('reveal-title');
+  const catEl    = document.getElementById('reveal-category');
+  const moodEl   = document.getElementById('reveal-mood');
+  const thumb    = document.getElementById('reveal-thumb');
   const fallback = document.getElementById('thumb-fallback');
 
   // Title
-  titleEl.textContent = recipe.title || '';
+  titleEl.textContent   = recipe.title || '';
   titleEl.style.display = recipe.title ? '' : 'none';
   const titleFallback = document.getElementById('reveal-title-fallback');
   if (titleFallback) titleFallback.textContent = document.getElementById('reveal-title').textContent;
 
   // Badges
-  catEl.textContent = recipe.category;
+  catEl.textContent  = recipe.category;
   moodEl.textContent = recipe.mood === 'None' ? 'No mood set' : recipe.mood;
 
   // Thumbnail
@@ -179,9 +179,9 @@ function showReveal(recipe) {
       thumb.classList.add('thumb-reveal');
     });
   } else {
-    thumb.style.display = 'none';
+    thumb.style.display   = 'none';
     fallback.style.display = 'flex';
-    fallback.textContent = '🍽️';
+    fallback.textContent  = '🍽️';
   }
 
   // Recipe details + analyze button
@@ -202,9 +202,11 @@ function showReveal(recipe) {
   void card.offsetWidth;
   card.classList.add('card-pop');
 
-  // Hide the main spin button container to reduce clutter
+  // Hide the main spin button container and hero text to reduce clutter
   const spinContainer = document.getElementById('spin-container');
   if (spinContainer) spinContainer.classList.add('hidden');
+  const heroHeading = document.getElementById('hero-heading');
+  if (heroHeading) heroHeading.classList.add('hidden');
 
   // Confetti burst
   requestAnimationFrame(() => spawnConfetti(card));
@@ -221,9 +223,11 @@ function hideReveal() {
   document.getElementById('recipe-details').classList.add('hidden');
   document.getElementById('analyze-btn').classList.add('hidden');
 
-  // Restore the main spin button container
+  // Restore the main spin button container and hero text
   const spinContainer = document.getElementById('spin-container');
   if (spinContainer) spinContainer.classList.remove('hidden');
+  const heroHeading = document.getElementById('hero-heading');
+  if (heroHeading) heroHeading.classList.remove('hidden');
 }
 
 // ── Deep link ─────────────────────────────────────────────────────────────────
