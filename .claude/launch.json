@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "RecipeRoulette",
+      "runtimeExecutable": "../../../venv/Scripts/python",
+      "runtimeArgs": ["-c", "import os,uvicorn; uvicorn.run('app:app', host='0.0.0.0', port=int(os.getenv('PORT','8000')))"],
+      "port": 8002,
+      "autoPort": true
+    }
+  ]
+}
