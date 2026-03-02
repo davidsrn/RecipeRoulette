@@ -145,6 +145,8 @@ function showReveal(recipe) {
   // Title
   titleEl.textContent   = recipe.title || '';
   titleEl.style.display = recipe.title ? '' : 'none';
+  const titleFallback = document.getElementById('reveal-title-fallback');
+  if (titleFallback) titleFallback.textContent = document.getElementById('reveal-title').textContent;
 
   // Badges
   catEl.textContent  = recipe.category;
