@@ -6,6 +6,15 @@ const filters = { category: 'All', mood: 'All' };
 let currentRecipe = null;
 let editingId = null;
 
+function toggleFilterDrawer() {
+  const drawer = document.getElementById('filter-drawer');
+  const chevron = document.getElementById('filter-chevron');
+  if (!drawer) return;
+  const isOpen = drawer.classList.contains('drawer-open');
+  drawer.classList.toggle('drawer-open', !isOpen);
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -91,6 +100,12 @@ function spawnConfetti(anchor) {
 // ── Spin ──────────────────────────────────────────────────────────────────────
 
 async function spin() {
+  // Close filter drawer if open
+  const filterDrawer = document.getElementById('filter-drawer');
+  if (filterDrawer) filterDrawer.classList.remove('drawer-open');
+  const filterChevron = document.getElementById('filter-chevron');
+  if (filterChevron) filterChevron.style.transform = '';
+
   const btn       = document.getElementById('spin-btn');
   const noResults = document.getElementById('no-results');
 
