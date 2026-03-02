@@ -84,7 +84,7 @@
 </div>
 
 <!-- Spin button -->
-<div class="flex justify-center my-8">
+<div id="spin-container" class="flex justify-center my-8">
   <button
     id="spin-btn"
     onclick="spin()"
@@ -117,7 +117,6 @@
       <img id="reveal-thumb"
         src="" alt="Recipe preview"
         class="w-full object-cover"
-        style="max-height: 260px;"
         onerror="this.style.display='none'; document.getElementById('thumb-overlay').style.display='none'; document.getElementById('thumb-fallback').style.display='flex';" />
 
       <!-- Gradient overlay with title (hidden when thumbnail fails) -->
@@ -131,7 +130,7 @@
 
       <!-- Fallback (no thumbnail) -->
       <div id="thumb-fallback"
-        class="hidden h-40 bg-warm-100 items-center justify-center flex-col gap-3">
+        class="hidden h-64 bg-warm-100 items-center justify-center flex-col gap-3">
         <span class="text-5xl">🍽️</span>
         <p id="reveal-title-fallback"
            class="font-serif font-bold text-espresso text-lg px-6 text-center leading-snug"></p>
@@ -165,14 +164,23 @@
         <span>👨‍🍳</span>
       </button>
 
-      <!-- Spin again — text link style -->
-      <button
-        onclick="spin()"
-        class="w-full py-2 text-text-muted hover:text-primary text-sm font-medium
-               transition-colors hover:underline underline-offset-2"
-      >
-        Spin again
-      </button>
+      <!-- Action links row -->
+      <div class="flex gap-4 items-center justify-between mt-1">
+        <button
+          onclick="markCurrentAsDone()"
+          class="flex-1 py-2 text-text-muted hover:text-green-600 text-sm font-medium
+                 transition-colors hover:underline underline-offset-2 text-center"
+        >
+          Mark as done ✓
+        </button>
+        <button
+          onclick="spin()"
+          class="flex-1 py-2 text-text-muted hover:text-primary text-sm font-medium
+                 transition-colors hover:underline underline-offset-2 text-center border-l border-warm-200"
+        >
+          Spin again ↺
+        </button>
+      </div>
 
       <!-- Extract recipe button -->
       <button

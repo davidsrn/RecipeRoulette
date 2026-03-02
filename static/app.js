@@ -31,22 +31,22 @@ function toggleFilter(type, value, el) {
 
 // ── Slot machine ──────────────────────────────────────────────────────────────
 
-const FOOD_EMOJIS = ['🍕','🍜','🥗','🌮','🍣','🥩','🍝','🫕','🥘','🍛','🍱','🥟','🧆','🥙','🍲','🫔'];
+const FOOD_EMOJIS = ['🍕', '🍜', '🥗', '🌮', '🍣', '🥩', '🍝', '🫕', '🥘', '🍛', '🍱', '🥟', '🧆', '🥙', '🍲', '🫔'];
 
 function showSlotMachine() {
-  const card     = document.getElementById('reveal-card');
-  const thumb    = document.getElementById('reveal-thumb');
+  const card = document.getElementById('reveal-card');
+  const thumb = document.getElementById('reveal-thumb');
   const fallback = document.getElementById('thumb-fallback');
-  const titleEl  = document.getElementById('reveal-title');
-  const catEl    = document.getElementById('reveal-category');
-  const moodEl   = document.getElementById('reveal-mood');
+  const titleEl = document.getElementById('reveal-title');
+  const catEl = document.getElementById('reveal-category');
+  const moodEl = document.getElementById('reveal-mood');
 
   // Reveal card in "loading" state
   card.classList.remove('hidden', 'card-pop', 'fade-up');
   thumb.style.display = 'none';
   fallback.style.display = 'flex';
   titleEl.style.display = 'none';
-  catEl.textContent  = '· · ·';
+  catEl.textContent = '· · ·';
   moodEl.textContent = '· · ·';
 
   // Cycle emojis
@@ -65,19 +65,19 @@ function showSlotMachine() {
 // ── Confetti ──────────────────────────────────────────────────────────────────
 
 function spawnConfetti(anchor) {
-  const rect   = anchor.getBoundingClientRect();
-  const cx     = rect.left + rect.width  / 2;
-  const cy     = rect.top  + rect.height * 0.3;
-  const colors = ['#F97316','#FBBF24','#FB923C','#FCD34D','#FDE68A','#EC4899','#34D399','#60A5FA'];
+  const rect = anchor.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height * 0.3;
+  const colors = ['#F97316', '#FBBF24', '#FB923C', '#FCD34D', '#FDE68A', '#EC4899', '#34D399', '#60A5FA'];
 
   for (let i = 0; i < 18; i++) {
-    const dot   = document.createElement('div');
+    const dot = document.createElement('div');
     dot.className = 'confetti-dot';
     const angle = (i / 18) * 360 + (Math.random() * 20 - 10);
-    const dist  = 50 + Math.random() * 100;
-    const tx    = (Math.cos(angle * Math.PI / 180) * dist).toFixed(1) + 'px';
-    const ty    = (Math.sin(angle * Math.PI / 180) * dist - 50).toFixed(1) + 'px';
-    const rot   = (Math.random() * 720 - 360).toFixed(0) + 'deg';
+    const dist = 50 + Math.random() * 100;
+    const tx = (Math.cos(angle * Math.PI / 180) * dist).toFixed(1) + 'px';
+    const ty = (Math.sin(angle * Math.PI / 180) * dist - 50).toFixed(1) + 'px';
+    const rot = (Math.random() * 720 - 360).toFixed(0) + 'deg';
     // Alternate between circles and squares
     const radius = i % 3 === 0 ? '2px' : '50%';
 
@@ -106,19 +106,19 @@ async function spin() {
   const filterChevron = document.getElementById('filter-chevron');
   if (filterChevron) filterChevron.style.transform = '';
 
-  const btn       = document.getElementById('spin-btn');
+  const btn = document.getElementById('spin-btn');
   const noResults = document.getElementById('no-results');
 
   btn.classList.add('is-spinning');
   btn.disabled = true;
   noResults.classList.add('hidden');
 
-  const stopSlot   = showSlotMachine();
-  const minWait    = sleep(900); // always spin at least 900 ms for drama
+  const stopSlot = showSlotMachine();
+  const minWait = sleep(900); // always spin at least 900 ms for drama
 
   const params = new URLSearchParams();
   if (filters.category !== 'All') params.set('category', filters.category);
-  if (filters.mood     !== 'All') params.set('mood',     filters.mood);
+  if (filters.mood !== 'All') params.set('mood', filters.mood);
 
   try {
     const [res] = await Promise.all([
@@ -150,21 +150,21 @@ async function spin() {
 }
 
 function showReveal(recipe) {
-  const card     = document.getElementById('reveal-card');
-  const titleEl  = document.getElementById('reveal-title');
-  const catEl    = document.getElementById('reveal-category');
-  const moodEl   = document.getElementById('reveal-mood');
-  const thumb    = document.getElementById('reveal-thumb');
+  const card = document.getElementById('reveal-card');
+  const titleEl = document.getElementById('reveal-title');
+  const catEl = document.getElementById('reveal-category');
+  const moodEl = document.getElementById('reveal-mood');
+  const thumb = document.getElementById('reveal-thumb');
   const fallback = document.getElementById('thumb-fallback');
 
   // Title
-  titleEl.textContent   = recipe.title || '';
+  titleEl.textContent = recipe.title || '';
   titleEl.style.display = recipe.title ? '' : 'none';
   const titleFallback = document.getElementById('reveal-title-fallback');
   if (titleFallback) titleFallback.textContent = document.getElementById('reveal-title').textContent;
 
   // Badges
-  catEl.textContent  = recipe.category;
+  catEl.textContent = recipe.category;
   moodEl.textContent = recipe.mood === 'None' ? 'No mood set' : recipe.mood;
 
   // Thumbnail
@@ -179,9 +179,9 @@ function showReveal(recipe) {
       thumb.classList.add('thumb-reveal');
     });
   } else {
-    thumb.style.display   = 'none';
+    thumb.style.display = 'none';
     fallback.style.display = 'flex';
-    fallback.textContent  = '🍽️';
+    fallback.textContent = '🍽️';
   }
 
   // Recipe details + analyze button
@@ -202,6 +202,10 @@ function showReveal(recipe) {
   void card.offsetWidth;
   card.classList.add('card-pop');
 
+  // Hide the main spin button container to reduce clutter
+  const spinContainer = document.getElementById('spin-container');
+  if (spinContainer) spinContainer.classList.add('hidden');
+
   // Confetti burst
   requestAnimationFrame(() => spawnConfetti(card));
 
@@ -216,6 +220,10 @@ function hideReveal() {
   currentRecipe = null;
   document.getElementById('recipe-details').classList.add('hidden');
   document.getElementById('analyze-btn').classList.add('hidden');
+
+  // Restore the main spin button container
+  const spinContainer = document.getElementById('spin-container');
+  if (spinContainer) spinContainer.classList.remove('hidden');
 }
 
 // ── Deep link ─────────────────────────────────────────────────────────────────
@@ -294,10 +302,10 @@ function openEdit(id, category, mood, title, done) {
   editingId = id;
   const row = document.getElementById(`row-${id}`);
   document.getElementById('edit-shortcode').textContent = row?.dataset.shortcode ?? '';
-  document.getElementById('edit-title').value           = title || '';
-  document.getElementById('edit-category').value        = category;
-  document.getElementById('edit-mood').value            = mood;
-  document.getElementById('edit-done').checked          = done === true;
+  document.getElementById('edit-title').value = title || '';
+  document.getElementById('edit-category').value = category;
+  document.getElementById('edit-mood').value = mood;
+  document.getElementById('edit-done').checked = done === true;
   document.getElementById('edit-modal').classList.remove('hidden');
 }
 
@@ -309,10 +317,10 @@ function closeEdit() {
 async function saveEdit() {
   if (!editingId) return;
 
-  const title    = document.getElementById('edit-title').value.trim();
+  const title = document.getElementById('edit-title').value.trim();
   const category = document.getElementById('edit-category').value;
-  const mood     = document.getElementById('edit-mood').value;
-  const done     = document.getElementById('edit-done').checked;
+  const mood = document.getElementById('edit-mood').value;
+  const done = document.getElementById('edit-done').checked;
 
   try {
     const res = await fetch(`/api/recipe/${editingId}`, {
@@ -327,13 +335,13 @@ async function saveEdit() {
 
     const row = document.getElementById(`row-${editingId}`);
     if (row) {
-      row.dataset.title    = updated.title || '';
+      row.dataset.title = updated.title || '';
       row.dataset.category = updated.category;
-      row.dataset.mood     = updated.mood;
+      row.dataset.mood = updated.mood;
 
       const titleEl = row.querySelector('[data-role="title"]');
       if (titleEl) {
-        titleEl.textContent   = updated.title || '';
+        titleEl.textContent = updated.title || '';
         titleEl.style.display = updated.title ? '' : 'none';
       }
 
@@ -392,11 +400,11 @@ function escHtml(str) {
 }
 
 function showRecipeDetails(recipe) {
-  const detailsEl    = document.getElementById('recipe-details');
-  const ingrSection  = document.getElementById('ingr-section');
+  const detailsEl = document.getElementById('recipe-details');
+  const ingrSection = document.getElementById('ingr-section');
   const instrSection = document.getElementById('instr-section');
-  const ingrList     = document.getElementById('ingr-list');
-  const instrList    = document.getElementById('instr-list');
+  const ingrList = document.getElementById('ingr-list');
+  const instrList = document.getElementById('instr-list');
 
   if (recipe.ingredients) {
     const lines = recipe.ingredients.split('\n').map(l => l.trim()).filter(Boolean);
@@ -433,12 +441,12 @@ function showRecipeDetails(recipe) {
 
 async function analyzeRecipe() {
   if (!currentRecipe) return;
-  const btn   = document.getElementById('analyze-btn');
-  const icon  = document.getElementById('analyze-icon');
+  const btn = document.getElementById('analyze-btn');
+  const icon = document.getElementById('analyze-icon');
   const label = document.getElementById('analyze-label');
 
-  btn.disabled      = true;
-  icon.textContent  = '⏳';
+  btn.disabled = true;
+  icon.textContent = '⏳';
   label.textContent = 'Extracting…';
 
   try {
@@ -453,10 +461,31 @@ async function analyzeRecipe() {
     if (moodEl) moodEl.textContent = updated.mood === 'None' ? 'No mood set' : updated.mood;
     showToast('Recipe extracted! ✨', 'success');
   } catch (err) {
-    icon.textContent  = '✨';
+    icon.textContent = '✨';
     label.textContent = 'Extract recipe';
-    btn.disabled      = false;
+    btn.disabled = false;
     showToast('Extraction failed. Try again.', 'error');
+  }
+}
+
+// ── Mark current as done ──────────────────────────────────────────────────────
+
+async function markCurrentAsDone() {
+  if (!currentRecipe) return;
+  const id = currentRecipe.id;
+
+  try {
+    const res = await fetch(`/api/recipe/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: true }),
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    showToast('Recipe marked as done! ✨', 'success');
+
+  } catch (err) {
+    showToast('Update failed. Try again.', 'error');
   }
 }
 
