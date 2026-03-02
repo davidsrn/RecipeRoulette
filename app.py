@@ -172,6 +172,7 @@ async def spin(
         if mood and mood != "All":
             query = query.filter(Recipe.mood == mood)
 
+        query = query.filter(Recipe.done == False)
         recipe = query.order_by(func.random()).first()
 
     if not recipe:
@@ -193,6 +194,7 @@ async def update_recipe(
     new_category = body.get("category")
     new_mood = body.get("mood")
     new_title = body.get("title")  # optional free-text, no allowlist needed
+    new_done = body.get("done")  # bool or None
 
     if new_category and new_category not in CATEGORIES:
         raise HTTPException(status_code=422, detail=f"Invalid category: {new_category}")
@@ -210,6 +212,8 @@ async def update_recipe(
             recipe.mood = new_mood
         if new_title is not None:
             recipe.title = new_title.strip() or None  # empty string → null
+        if new_done is not None:
+            recipe.done = bool(new_done)
 
         session.commit()
         return JSONResponse(recipe.to_dict())
