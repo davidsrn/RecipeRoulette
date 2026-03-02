@@ -31,8 +31,9 @@
     data-title="{{ r.title or '' }}"
     data-category="{{ r.category }}"
     data-mood="{{ r.mood }}"
+    data-done="{{ 'true' if r.done else 'false' }}"
     class="bg-white rounded-xl border border-stone-100 shadow-sm px-4 py-3
-           flex items-center justify-between gap-3"
+           flex items-center justify-between gap-3 {% if r.done %}opacity-50{% endif %}"
   >
     <!-- Thumbnail -->
     <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-warm-100 flex items-center justify-center">
@@ -67,6 +68,21 @@
 
     <!-- Actions -->
     <div class="flex-shrink-0 flex items-center gap-2">
+      <button
+        onclick="toggleDone({{ r.id }})"
+        title="{% if r.done %}Mark as not done{% else %}Mark as done{% endif %}"
+        class="p-2 rounded-lg transition {% if r.done %}text-green-600 bg-green-50 hover:bg-green-100{% else %}text-stone-400 hover:text-green-600 hover:bg-green-50{% endif %}"
+      >
+        {% if r.done %}
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" d="M2.25 12a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
+        </svg>
+        {% else %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {% endif %}
+      </button>
       <a href="{{ r.url }}" target="_blank" rel="noopener"
          class="p-2 rounded-lg text-stone-400 hover:text-primary hover:bg-primary/10 transition"
          title="Open on Instagram">
