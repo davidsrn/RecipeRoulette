@@ -243,15 +243,61 @@ function filterList(query) {
   });
 }
 
+// ── Manage page: done toggle ──────────────────────────────────────────────────
+
+async function toggleDone(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+  const current = row.dataset.done === 'true';
+  const next = !current;
+
+  try {
+    const res = await fetch(`/api/recipe/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: next }),
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    row.dataset.done = next ? 'true' : 'false';
+
+    // Toggle dimming
+    row.classList.toggle('opacity-50', next);
+
+    // Swap the button icon
+    const btn = row.querySelector(`button[onclick="toggleDone(${id})"]`);
+    if (btn) {
+      if (next) {
+        btn.title = 'Mark as not done';
+        btn.className = 'p-2 rounded-lg transition text-green-600 bg-green-50 hover:bg-green-100';
+        btn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" d="M2.25 12a9.75 9.75 0 1119.5 0 9.75 9.75 0 01-19.5 0zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
+        </svg>`;
+      } else {
+        btn.title = 'Mark as done';
+        btn.className = 'p-2 rounded-lg transition text-stone-400 hover:text-green-600 hover:bg-green-50';
+        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+      }
+    }
+
+    showToast(next ? 'Marked as done' : 'Marked as not done', 'success');
+  } catch (err) {
+    showToast('Update failed. Try again.', 'error');
+  }
+}
+
 // ── Manage page: edit modal ───────────────────────────────────────────────────
 
-function openEdit(id, category, mood, title) {
+function openEdit(id, category, mood, title, done) {
   editingId = id;
   const row = document.getElementById(`row-${id}`);
   document.getElementById('edit-shortcode').textContent = row?.dataset.shortcode ?? '';
   document.getElementById('edit-title').value           = title || '';
   document.getElementById('edit-category').value        = category;
   document.getElementById('edit-mood').value            = mood;
+  document.getElementById('edit-done').checked          = done === true;
   document.getElementById('edit-modal').classList.remove('hidden');
 }
 
@@ -266,12 +312,13 @@ async function saveEdit() {
   const title    = document.getElementById('edit-title').value.trim();
   const category = document.getElementById('edit-category').value;
   const mood     = document.getElementById('edit-mood').value;
+  const done     = document.getElementById('edit-done').checked;
 
   try {
     const res = await fetch(`/api/recipe/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, category, mood }),
+      body: JSON.stringify({ title, category, mood, done }),
     });
 
     if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -293,6 +340,9 @@ async function saveEdit() {
       const badges = row.querySelectorAll('span[class*="rounded-full"]');
       if (badges[0]) badges[0].textContent = updated.category;
       if (badges[1]) badges[1].textContent = updated.mood;
+
+      row.dataset.done = updated.done ? 'true' : 'false';
+      row.classList.toggle('opacity-50', updated.done);
     }
 
     closeEdit();
